@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 // ប្តូរ URL នេះទៅតាម URL របស់ Backend លើ Vercel
-const API_URL = "https://taskly-api.vercel.app/api/tasks";
+const API_URL = "https://task-manager-backend-red-nine.vercel.app/api/tasks";
 
 function App() {
   const [tasks, setTasks] = useState([]);
