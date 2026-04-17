@@ -4,8 +4,8 @@ import {
   Plus, Trash2, Calendar, X, Sparkles, Edit3, Save, ArrowRight, Menu
 } from "lucide-react";
 
-// ប្តូរ URL នេះទៅតាម URL របស់ Backend លើ Vercel
-const API_URL = "https://task-manager-backend-red-nine.vercel.app/api/tasks";
+// ប្រើ Environment Variable ជំនួសឱ្យ Hardcoded URL ដើម្បីភាពងាយស្រួលលើ Vercel
+const API_URL = import.meta.env.VITE_API_URL || "https://task-manager-backend-red-nine.vercel.app/api/tasks";
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -14,15 +14,27 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ 
-    title: "", description: "", priority: "មធ្យម", status: "todo", startDate: "", endDate: "" 
+    title: "", description: "", priority: "medium", status: "todo", startDate: "", endDate: "" 
   });
 
+  // មុខងារទាញយកទិន្នន័យ (ជាមួយ Error Handling)
   const fetchTasks = async () => {
     try {
       const res = await fetch(API_URL);
+      if (!res.ok) throw new Error("Network response was not ok");
       const data = await res.json();
-      setTasks(data);
-    } catch (err) { console.error(err); }
+      
+      // ការពារបញ្ហា e.filter is not a function ដោយប្រាកដថា data ជា Array
+      if (Array.isArray(data)) {
+        setTasks(data);
+      } else {
+        console.error("Data received is not an array:", data);
+        setTasks([]); 
+      }
+    } catch (err) { 
+      console.error("Fetch Error:", err); 
+      setTasks([]); // ដាក់ Array ទទេបើមាន Error ដើម្បីកុំឱ្យ Crash
+    }
   };
 
   useEffect(() => { fetchTasks(); }, []);
@@ -33,16 +45,22 @@ function App() {
     const url = isEdit ? `${API_URL}/${editingId}` : API_URL;
     const method = isEdit ? "PUT" : "POST";
 
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    setShowModal(false);
-    setEditingId(null);
-    setFormData({ title: "", description: "", priority: "មធ្យម", status: "todo", startDate: "", endDate: "" });
-    fetchTasks();
+      if (response.ok) {
+        setShowModal(false);
+        setEditingId(null);
+        setFormData({ title: "", description: "", priority: "medium", status: "todo", startDate: "", endDate: "" });
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error("Submit Error:", err);
+    }
   };
 
   const handleEdit = (task) => {
@@ -57,16 +75,23 @@ function App() {
 
   const deleteTask = async (id) => {
     if (window.confirm("តើអ្នកប្រាកដថាចង់លុប?")) {
-      await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      fetchTasks();
+      try {
+        await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        fetchTasks();
+      } catch (err) {
+        console.error("Delete Error:", err);
+      }
     }
   };
 
+  // ស្ថិតិ (Stats)
   const stats = {
-    total: tasks.length,
-    done: tasks.filter(t => t.status === 'completed').length,
-    prog: tasks.filter(t => t.status === 'todo').length,
-    rate: tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0
+    total: Array.isArray(tasks) ? tasks.length : 0,
+    done: Array.isArray(tasks) ? tasks.filter(t => t.status === 'completed').length : 0,
+    prog: Array.isArray(tasks) ? tasks.filter(t => t.status === 'todo').length : 0,
+    rate: (Array.isArray(tasks) && tasks.length > 0) 
+          ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) 
+          : 0
   };
 
   return (
@@ -99,7 +124,10 @@ function App() {
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="lg:col-span-2 bg-white/5 border border-white/10 p-8 rounded-[3rem] flex flex-col md:flex-row items-center justify-around gap-10">
               <div className="relative w-40 h-40 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90"><circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-white/5" /><circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - (440 * stats.rate) / 100} strokeLinecap="round" className="text-blue-500 transition-all duration-1000" /></svg>
+                <svg className="w-full h-full -rotate-90">
+                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-white/5" />
+                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - (440 * stats.rate) / 100} strokeLinecap="round" className="text-blue-500 transition-all duration-1000" />
+                </svg>
                 <span className="absolute text-4xl font-black">{stats.rate}%</span>
               </div>
               <div className="text-center md:text-left border-l-4 border-blue-500 pl-8">
@@ -108,15 +136,21 @@ function App() {
               </div>
             </div>
             <div className="flex flex-col gap-4">
-               <StatusCard label="កំពុងអនុវត្ត" count={stats.prog} color="blue" icon={<Clock/>}/>
-               <StatusCard label="បានបញ្ចប់" count={stats.done} color="emerald" icon={<CheckCircle2/>}/>
+                <StatusCard label="កំពុងអនុវត្ត" count={stats.prog} color="blue" icon={<Clock/>}/>
+                <StatusCard label="បានបញ្ចប់" count={stats.done} color="emerald" icon={<CheckCircle2/>}/>
             </div>
           </section>
         )}
 
-        {filter !== 'all' && (
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {tasks.filter(t => (filter==='completed' ? t.status==='completed' : t.status==='todo')).map(task => (
+        {/* បញ្ជីភារកិច្ច */}
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-10">
+          {Array.isArray(tasks) && tasks
+            .filter(t => {
+              if (filter === 'completed') return t.status === 'completed';
+              if (filter === 'progressing') return t.status === 'todo';
+              return true;
+            })
+            .map(task => (
               <div key={task.id} className="group bg-white/5 border border-white/10 p-6 rounded-[2rem] relative transition-all hover:bg-white/[0.08]">
                 <div className={`absolute top-0 left-0 w-2 h-full ${task.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
                 <div className="flex justify-between mb-4">
@@ -133,8 +167,7 @@ function App() {
                 </div>
               </div>
             ))}
-          </section>
-        )}
+        </section>
 
         {/* Modal Form */}
         {showModal && (
@@ -146,14 +179,23 @@ function App() {
                 <input type="text" placeholder="Title..." required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
                 <textarea placeholder="Description..." className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl h-24 outline-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                 <div className="grid grid-cols-2 gap-4">
-                  <select className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
-                  <select className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}><option value="todo">Progressing</option><option value="completed">Completed</option></select>
+                  <select className="w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-2xl outline-none" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <select className="w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                    <option value="todo">Progressing</option>
+                    <option value="completed">Completed</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-[10px] font-black text-slate-500 uppercase">
                   <div><label>Start</label><input type="datetime-local" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} /></div>
                   <div><label>End</label><input type="datetime-local" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} /></div>
                 </div>
-                <button type="submit" className="w-full py-5 bg-blue-600 rounded-2xl font-black hover:bg-blue-500 transition-all"><Save size={20} className="inline mr-2"/> {editingId ? "យល់ព្រមកែប្រែ" : "រក្សាទុក"}</button>
+                <button type="submit" className="w-full py-5 bg-blue-600 rounded-2xl font-black hover:bg-blue-500 transition-all flex items-center justify-center gap-2">
+                  <Save size={20}/> {editingId ? "យល់ព្រមកែប្រែ" : "រក្សាទុក"}
+                </button>
               </form>
             </div>
           </div>
@@ -163,6 +205,7 @@ function App() {
   );
 }
 
+// Components
 function NavBtn({ icon, label, active, onClick }) {
   return (
     <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${active ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-500 hover:bg-white/5'}`}>{icon} {label}</button>
