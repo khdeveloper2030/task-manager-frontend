@@ -125,55 +125,64 @@ function App() {
           </button>
         </header>
 
+        {/* Dashboard Overview - បង្ហាញតែនៅពេល filter === 'all' */}
         {filter === 'all' && (
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="lg:col-span-2 bg-white/5 border border-white/10 p-8 rounded-[3rem] flex flex-col md:flex-row items-center justify-around gap-10">
-              <div className="relative w-40 h-40 flex items-center justify-center">
+            <div className="lg:col-span-2 bg-white/5 border border-white/10 p-12 rounded-[3.5rem] flex flex-col md:flex-row items-center justify-around gap-10">
+              <div className="relative w-52 h-52 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90">
-                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-white/5" />
-                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - (440 * stats.rate) / 100} strokeLinecap="round" className="text-blue-500 transition-all duration-1000" />
+                  <circle cx="104" cy="104" r="90" stroke="currentColor" strokeWidth="16" fill="transparent" className="text-white/5" />
+                  <circle cx="104" cy="104" r="90" stroke="currentColor" strokeWidth="16" fill="transparent" strokeDasharray="565" strokeDashoffset={565 - (565 * stats.rate) / 100} strokeLinecap="round" className="text-blue-500 transition-all duration-1000" />
                 </svg>
-                <span className="absolute text-4xl font-black">{stats.rate}%</span>
+                <span className="absolute text-5xl font-black italic">{stats.rate}%</span>
               </div>
-              <div className="text-center md:text-left border-l-4 border-blue-500 pl-8">
-                <p className="text-slate-500 text-xs font-bold uppercase mb-1 tracking-widest">ភារកិច្ចសរុប</p>
-                <h4 className="text-6xl font-black italic tracking-tighter">{stats.total}</h4>
+              <div className="text-center md:text-left border-l-4 border-blue-500 pl-10">
+                <p className="text-slate-500 text-sm font-bold uppercase mb-2 tracking-[0.3em]">Progress Rate</p>
+                <p className="text-slate-500 text-xs font-bold uppercase mb-1 opacity-50">ភារកិច្ចសរុប</p>
+                <h4 className="text-7xl font-black italic tracking-tighter">{stats.total}</h4>
               </div>
             </div>
-            <div className="flex flex-col gap-4">
-                <StatusCard label="កំពុងអនុវត្ត" count={stats.prog} color="blue" icon={<Clock/>}/>
-                <StatusCard label="បានបញ្ចប់" count={stats.done} color="emerald" icon={<CheckCircle2/>}/>
+            <div className="flex flex-col gap-6">
+                <StatusCard label="កំពុងអនុវត្ត" count={stats.prog} color="blue" icon={<Clock size={32}/>}/>
+                <StatusCard label="បានបញ្ចប់" count={stats.done} color="emerald" icon={<CheckCircle2 size={32}/>}/>
             </div>
           </section>
         )}
 
-        {/* Task Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {tasks
-            .filter(t => {
-              if (filter === 'completed') return t.status === 'completed';
-              if (filter === 'progressing') return t.status === 'todo';
-              return true;
-            })
-            .map(task => (
-              <div key={task.id} className="group bg-white/5 border border-white/10 p-6 rounded-[2rem] relative transition-all hover:bg-white/[0.08] hover:border-white/20">
-                <div className={`absolute top-0 left-0 w-2 h-full rounded-l-full ${task.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
-                <div className="flex justify-between mb-4">
-                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${task.priority === 'high' ? 'border-red-500/50 text-red-400' : 'border-white/10 text-slate-400'}`}>{task.priority}</span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(task)} className="p-2 text-slate-500 hover:text-blue-400"><Edit3 size={18}/></button>
-                    <button onClick={() => deleteTask(task.id)} className="p-2 text-slate-500 hover:text-red-400"><Trash2 size={18}/></button>
+        {/* Task Grid - បង្ហាញតែនៅពេល filter មិនមែនជា 'all' */}
+        {filter !== 'all' && (
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
+            {tasks
+              .filter(t => {
+                if (filter === 'completed') return t.status === 'completed';
+                if (filter === 'progressing') return t.status === 'todo';
+                return true;
+              })
+              .map(task => (
+                <div key={task.id} className="group bg-white/5 border border-white/10 p-6 rounded-[2rem] relative transition-all hover:bg-white/[0.08] hover:border-white/20">
+                  <div className={`absolute top-0 left-0 w-2 h-full rounded-l-full ${task.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
+                  <div className="flex justify-between mb-4">
+                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${task.priority === 'high' ? 'border-red-500/50 text-red-400' : 'border-white/10 text-slate-400'}`}>{task.priority}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEdit(task)} className="p-2 text-slate-500 hover:text-blue-400"><Edit3 size={18}/></button>
+                      <button onClick={() => deleteTask(task.id)} className="p-2 text-slate-500 hover:text-red-400"><Trash2 size={18}/></button>
+                    </div>
+                  </div>
+                  <h3 className={`text-xl font-bold mb-4 leading-tight ${task.status === 'completed' ? 'line-through text-slate-600' : 'text-slate-100'}`}>{task.title}</h3>
+                  <p className="text-slate-500 text-sm mb-6 line-clamp-2">{task.description}</p>
+                  <div className="space-y-1 text-[10px] font-bold text-slate-500 font-sans border-t border-white/5 pt-4">
+                    <div className="flex justify-between"><span>ចាប់ផ្ដើម:</span> <span>{task.startDate ? new Date(task.startDate).toLocaleString('km-KH') : '---'}</span></div>
+                    <div className="flex justify-between"><span>បញ្ចប់:</span> <span>{task.endDate ? new Date(task.endDate).toLocaleString('km-KH') : '---'}</span></div>
                   </div>
                 </div>
-                <h3 className={`text-xl font-bold mb-4 leading-tight ${task.status === 'completed' ? 'line-through text-slate-600' : 'text-slate-100'}`}>{task.title}</h3>
-                <p className="text-slate-500 text-sm mb-6 line-clamp-2">{task.description}</p>
-                <div className="space-y-1 text-[10px] font-bold text-slate-500 font-sans border-t border-white/5 pt-4">
-                  <div className="flex justify-between"><span>ចាប់ផ្ដើម:</span> <span>{task.startDate ? new Date(task.startDate).toLocaleString('km-KH') : '---'}</span></div>
-                  <div className="flex justify-between"><span>បញ្ចប់:</span> <span>{task.endDate ? new Date(task.endDate).toLocaleString('km-KH') : '---'}</span></div>
-                </div>
-              </div>
-            ))}
-        </section>
+              ))}
+              
+              {/* សារបង្ហាញពេលបញ្ជីទទេ */}
+              {tasks.filter(t => (filter === 'completed' ? t.status === 'completed' : t.status === 'todo')).length === 0 && (
+                <div className="col-span-full text-center py-20 text-slate-600 italic">មិនមានភារកិច្ចក្នុងបញ្ជីនេះទេ...</div>
+              )}
+          </section>
+        )}
 
         {/* Form Modal */}
         {showModal && (
@@ -231,9 +240,9 @@ function StatusCard({ label, count, color, icon }) {
   const c = color === 'blue' ? 'border-blue-500/20 text-blue-400' : 'border-emerald-500/20 text-emerald-400';
   const iconC = color === 'blue' ? 'text-blue-500' : 'text-emerald-500';
   return (
-    <div className={`bg-white/5 border ${c} p-6 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.07] transition-colors`}>
-      <div><p className="text-[10px] font-black uppercase tracking-widest mb-1">{label}</p><h4 className="text-4xl font-black italic tracking-tighter">{count}</h4></div>
-      <div className={`${iconC} opacity-40`}>{icon}</div>
+    <div className={`bg-white/5 border ${c} p-8 rounded-[2.5rem] flex items-center justify-between hover:bg-white/[0.07] transition-all`}>
+      <div><p className="text-[10px] font-black uppercase tracking-widest mb-1">{label}</p><h4 className="text-5xl font-black italic tracking-tighter">{count}</h4></div>
+      <div className={`${iconC} opacity-40 scale-125`}>{icon}</div>
     </div>
   );
 }
