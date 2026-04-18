@@ -10,7 +10,7 @@ const API_URL = BASE_URL.endsWith('/tasks') ? BASE_URL : `${BASE_URL}/tasks`;
 
 function App() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // សម្រាប់ SplashScreen
+  const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all"); 
   const [showModal, setShowModal] = useState(false);
@@ -20,18 +20,17 @@ function App() {
     title: "", description: "", priority: "medium", status: "todo", startDate: "", endDate: "" 
   });
 
-  // ១. គ្រប់គ្រង SplashScreen និងឆែកមើលការ Login
+  // ១. គ្រប់គ្រង SplashScreen និងពិនិត្យស្ថានភាព Login
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // បង្ហាញ Splash រយៈពេល ២ វិនាទី
       const timer = setTimeout(() => setLoading(false), 2000);
       return () => clearTimeout(timer);
     });
     return () => unsubscribe();
   }, []);
 
-  // ២. មុខងារទាញយកទិន្នន័យតាម Email របស់ User
+  // ២. ទាញយកទិន្នន័យ (ភ្ជាប់ជាមួយ Email ដើម្បីការពារ Error 400 និងបែងចែក User)
   const fetchTasks = async () => {
     if (!user) return;
     try {
@@ -51,13 +50,18 @@ function App() {
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => signOut(auth);
 
+  // ៤. មុខងារ Submit (Add/Edit) - បញ្ជូន Payload ពេញលេញទៅ Backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     const isEdit = editingId !== null;
     const url = isEdit ? `${API_URL}/${editingId}` : API_URL;
     const method = isEdit ? "PUT" : "POST";
 
-    const payload = { ...formData, userEmail: user.email }; // ផ្ញើ Email ទៅជាមួយ
+    // សំខាន់៖ ត្រូវតែមាន userEmail ដើម្បីកុំឱ្យ Backend លោត Error 400
+    const payload = { 
+      ...formData, 
+      userEmail: user.email 
+    }; 
 
     try {
       const response = await fetch(url, {
@@ -71,6 +75,10 @@ function App() {
         setEditingId(null);
         setFormData({ title: "", description: "", priority: "medium", status: "todo", startDate: "", endDate: "" });
         fetchTasks();
+      } else {
+        const errorData = await response.json();
+        console.error("Server Error 400:", errorData);
+        alert("មិនអាចរក្សាទុកបានទេ៖ " + (errorData.error || "ទិន្នន័យមិនត្រឹមត្រូវ"));
       }
     } catch (err) {
       console.error("Submit Error:", err);
@@ -84,6 +92,7 @@ function App() {
       description: task.description || "", 
       priority: task.priority || "medium", 
       status: task.status || "todo", 
+      // រក្សាទម្រង់កាលបរិច្ឆេទឱ្យត្រូវជាមួយ Input
       startDate: task.startDate ? new Date(task.startDate).toISOString().slice(0, 16) : "",
       endDate: task.endDate ? new Date(task.endDate).toISOString().slice(0, 16) : "" 
     });
@@ -99,7 +108,6 @@ function App() {
     }
   };
 
-  // ៤. ការគណនាស្ថិតិ
   const stats = {
     total: tasks.length,
     done: tasks.filter(t => t.status === 'completed').length,
@@ -107,7 +115,6 @@ function App() {
     rate: tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0
   };
 
-  // --- UI: SplashScreen ---
   if (loading) {
     return (
       <div className="h-screen bg-[#0a0f1d] flex flex-col items-center justify-center">
@@ -121,14 +128,13 @@ function App() {
     );
   }
 
-  // --- UI: Login Page ---
   if (!user) {
     return (
       <div className="h-screen bg-[#0a0f1d] flex items-center justify-center p-6 text-center">
         <div className="bg-white/5 border border-white/10 p-12 rounded-[3.5rem] max-w-md w-full shadow-2xl">
           <Sparkles size={60} className="text-blue-500 mx-auto mb-8" fill="currentColor"/>
-          <h2 className="text-3xl font-black mb-4 text-white italic">Ready to Start?</h2>
-          <p className="text-slate-400 mb-10 text-sm">Sign in with Google to manage your private tasks.</p>
+          <h2 className="text-3xl font-black mb-4 text-white italic">Welcome Back</h2>
+          <p className="text-slate-400 mb-10 text-sm">Sign in with Google to access your tasks.</p>
           <button onClick={handleLogin} className="w-full py-5 bg-white text-black rounded-[2rem] font-black flex items-center justify-center gap-4 hover:bg-slate-200 transition-all active:scale-95 shadow-xl shadow-white/5">
             <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" /> Continue with Google
           </button>
@@ -137,11 +143,8 @@ function App() {
     );
   }
 
-  // --- UI: Dashboard Layout ---
   return (
     <div className="min-h-screen bg-[#0a0f1d] text-slate-200 flex font-sans overflow-x-hidden">
-      
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-72 border-r border-white/5 bg-[#0a0f1d]/95 backdrop-blur-xl p-6 flex flex-col z-50 transition-transform md:translate-x-0 md:static ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex justify-between items-center mb-10 text-blue-500">
           <div className="flex items-center gap-2 font-black italic tracking-tighter uppercase text-xl">
@@ -155,7 +158,7 @@ function App() {
           <NavBtn active={filter==='completed'} onClick={()=>{setFilter('completed'); setIsSidebarOpen(false)}} icon={<CheckCircle2 size={20}/>} label="បានបញ្ចប់" />
         </nav>
         <div className="mt-auto pt-6 border-t border-white/5">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6 bg-white/5 p-3 rounded-2xl">
                 <img src={user.photoURL} className="w-10 h-10 rounded-full border border-blue-500 p-0.5"/>
                 <div className="overflow-hidden"><p className="text-xs font-bold truncate">{user.displayName}</p></div>
             </div>
@@ -163,7 +166,6 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full">
         <header className="flex justify-between items-center mb-10">
           <div className="flex items-center gap-4">
@@ -171,12 +173,11 @@ function App() {
             <h2 className="text-2xl md:text-3xl font-black tracking-widest">{filter==='all'?"OVERVIEW":filter.toUpperCase()}</h2>
           </div>
           <button onClick={() => {setEditingId(null); setFormData({title:"", description:"", priority:"medium", status:"todo", startDate:"", endDate:""}); setShowModal(true);}} 
-            className="bg-blue-600 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 shadow-xl shadow-blue-900/20">
+            className="bg-blue-600 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 shadow-xl shadow-blue-900/20 active:scale-95 transition-all">
             <Plus size={20}/> ថ្មី
           </button>
         </header>
 
-        {/* Dashboard Overview - បង្ហាញតែនៅពេល filter === 'all' */}
         {filter === 'all' && (
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="lg:col-span-2 bg-white/5 border border-white/10 p-12 rounded-[3.5rem] flex flex-col md:flex-row items-center justify-around gap-10">
@@ -199,7 +200,6 @@ function App() {
           </section>
         )}
 
-        {/* Task Grid - បង្ហាញតែនៅពេល filter មិនមែនជា 'all' */}
         {filter !== 'all' && (
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
             {tasks
@@ -214,8 +214,11 @@ function App() {
                       <button onClick={() => deleteTask(task.id)} className="p-2 text-slate-500 hover:text-red-400"><Trash2 size={18}/></button>
                     </div>
                   </div>
-                  <h3 className={`text-xl font-bold mb-4 leading-tight ${task.status === 'completed' ? 'line-through text-slate-600' : 'text-slate-100'}`}>{task.title}</h3>
-                  <p className="text-slate-500 text-sm mb-6 line-clamp-2">{task.description}</p>
+                  <h3 className={`text-xl font-bold mb-2 leading-tight ${task.status === 'completed' ? 'line-through text-slate-600' : 'text-slate-100'}`}>{task.title}</h3>
+                  <p className="text-slate-500 text-sm mb-4 line-clamp-2">{task.description}</p>
+                  <div className="text-[10px] text-slate-600 font-bold border-t border-white/5 pt-3">
+                    {task.startDate && <div>Start: {new Date(task.startDate).toLocaleString()}</div>}
+                  </div>
                 </div>
               ))}
               {tasks.filter(t => (filter === 'completed' ? t.status === 'completed' : t.status === 'todo')).length === 0 && (
@@ -224,25 +227,34 @@ function App() {
           </section>
         )}
 
-        {/* Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <div className="bg-[#161b2c] w-full max-w-lg p-8 rounded-[3rem] relative shadow-2xl border border-white/10">
-              <button onClick={() => {setShowModal(false); setEditingId(null);}} className="absolute top-6 right-6 text-slate-500"><X/></button>
-              <h3 className="text-2xl font-black mb-6">{editingId ? "Update Task" : "New Task"}</h3>
+            <div className="bg-[#161b2c] w-full max-w-lg p-8 rounded-[3rem] relative shadow-2xl border border-white/10 animate-in zoom-in duration-300">
+              <button onClick={() => {setShowModal(false); setEditingId(null);}} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X/></button>
+              <h3 className="text-2xl font-black mb-6 italic">{editingId ? "Edit Task" : "New Task"}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <input type="text" placeholder="Title..." required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-                <textarea placeholder="Description..." className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl h-24 outline-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                <input type="text" placeholder="ចំណងជើង..." required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 transition-all" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                <textarea placeholder="ការពិពណ៌នា..." className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl h-24 outline-none focus:border-blue-500 transition-all" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                 <div className="grid grid-cols-2 gap-4">
                   <select className="w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-2xl outline-none" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
                     <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
                   </select>
                   <select className="w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                    <option value="todo">Progressing</option><option value="completed">Completed</option>
+                    <option value="todo">កំពុងអនុវត្ត</option><option value="completed">បានបញ្ចប់</option>
                   </select>
                 </div>
-                <button type="submit" className="w-full py-5 bg-blue-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-500 transition-all">
-                  <Save size={20}/> {editingId ? "យល់ព្រមកែប្រែ" : "រក្សាទុក"}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 ml-2 uppercase font-bold">Start Date</label>
+                    <input type="datetime-local" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl outline-none text-xs" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 ml-2 uppercase font-bold">End Date</label>
+                    <input type="datetime-local" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl outline-none text-xs" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
+                  </div>
+                </div>
+                <button type="submit" className="w-full py-5 bg-blue-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-500 shadow-xl transition-all">
+                  <Save size={20}/> {editingId ? "Update Now" : "Save Task"}
                 </button>
               </form>
             </div>
@@ -253,17 +265,16 @@ function App() {
   );
 }
 
-// Sub-components
 function NavBtn({ icon, label, active, onClick }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${active ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>{icon} {label}</button>
+    <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${active ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white/5'}`}>{icon} {label}</button>
   );
 }
 
 function StatusCard({ label, count, color, icon }) {
   const c = color === 'blue' ? 'border-blue-500/20 text-blue-400' : 'border-emerald-500/20 text-emerald-400';
   return (
-    <div className={`bg-white/5 border ${c} p-8 rounded-[2.5rem] flex items-center justify-between`}>
+    <div className={`bg-white/5 border ${c} p-8 rounded-[2.5rem] flex items-center justify-between hover:bg-white/[0.07] transition-all`}>
       <div><p className="text-[10px] font-black uppercase mb-1">{label}</p><h4 className="text-4xl font-black italic">{count}</h4></div>
       <div className="opacity-30 scale-125">{icon}</div>
     </div>
