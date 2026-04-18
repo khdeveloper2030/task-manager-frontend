@@ -1,11 +1,7 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth"; // បន្ថែម Auth
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCvOznxJib5o0ttuClENUoG3BO780ikPFM",
   authDomain: "taskly-4cd43.firebaseapp.com",
@@ -16,6 +12,10 @@ const firebaseConfig = {
   measurementId: "G-KF7F6Q2SY6"
 };
 
-// Initialize Firebase
+// បង្កើត Instance សម្រាប់ប្រើប្រាស់
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+// Export សម្រាប់យកទៅប្រើក្នុង App.jsx
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
