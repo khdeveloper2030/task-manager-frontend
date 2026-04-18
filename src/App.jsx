@@ -51,17 +51,32 @@ function App() {
   const handleLogout = () => signOut(auth);
 
   // ៤. មុខងារ Submit (Add/Edit) - បញ្ជូន Payload ពេញលេញទៅ Backend
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // បន្ថែមការការពារ៖ បើមិនទាន់ Login មិនឱ្យផ្ញើទៅ Backend នាំតែ Error 400
+    if (!user || !user.email) {
+      alert("សូម Login ជាមុនសិន!");
+      return;
+    }
+
     const isEdit = editingId !== null;
     const url = isEdit ? `${API_URL}/${editingId}` : API_URL;
     const method = isEdit ? "PUT" : "POST";
 
-    // សំខាន់៖ ត្រូវតែមាន userEmail ដើម្បីកុំឱ្យ Backend លោត Error 400
+    // បង្កើត Payload ដោយធានាថាគ្រប់ Column ទាំងអស់មានទិន្នន័យត្រឹមត្រូវ
     const payload = { 
-      ...formData, 
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      status: formData.status,
+      // ប្រសិនបើ Date ទទេ ត្រូវផ្ញើ null កុំផ្ញើអក្សរទទេ "" ដើម្បីកុំឱ្យ Postgres លោត Error
+      startDate: formData.startDate || null, 
+      endDate: formData.endDate || null,
       userEmail: user.email 
     }; 
+
+    console.log("🚀 ផ្ញើទៅកាន់ Server:", payload);
 
     try {
       const response = await fetch(url, {
@@ -77,14 +92,14 @@ function App() {
         fetchTasks();
       } else {
         const errorData = await response.json();
-        console.error("Server Error 400:", errorData);
-        alert("មិនអាចរក្សាទុកបានទេ៖ " + (errorData.error || "ទិន្នន័យមិនត្រឹមត្រូវ"));
+        console.error("❌ Server Error 400:", errorData);
+        // បង្ហាញ Error ពិតប្រាកដពី Backend ដើម្បីឱ្យយើងងាយស្រួលដោះស្រាយ
+        alert("កំហុស៖ " + (errorData.error || "ទិន្នន័យមិនត្រឹមត្រូវ"));
       }
     } catch (err) {
-      console.error("Submit Error:", err);
+      console.error("❌ Network Error:", err);
     }
   };
-
   const handleEdit = (task) => {
     setEditingId(task.id);
     setFormData({ 
